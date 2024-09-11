@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/metoro-io/statusphere/common/api"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/metoro-io/statusphere/common/api"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 func (s *AtlassianProvider) Name() string {
@@ -32,36 +33,36 @@ func NewAtlassianProvider(logger *zap.Logger, httpClient *http.Client) *Atlassia
 	}
 }
 
-func (s *AtlassianProvider) ScrapeStatusPageHistorical(ctx context.Context, url string) ([]api.Incident, error) {
+func (s *AtlassianProvider) ScrapeStatusPageHistorical(ctx context.Context, url string) ([]api.Incident, string, error) {
 	return s.scrapeAtlassianPageHistorical(ctx, url)
 }
 
-func (s *AtlassianProvider) ScrapeStatusPageCurrent(ctx context.Context, url string) ([]api.Incident, error) {
+func (s *AtlassianProvider) ScrapeStatusPageCurrent(ctx context.Context, url string) ([]api.Incident, string, error) {
 	return s.scrapeAtlassianPageCurrent(ctx, url)
 }
 
 // scrapeAtlassianPageCurrent is a helper function that will attempt to scrape the status
 // page using the atlassian method
 // If the atlassian method fails, it will return an error
-func (s *AtlassianProvider) scrapeAtlassianPageCurrent(ctx context.Context, url string) ([]api.Incident, error) {
+func (s *AtlassianProvider) scrapeAtlassianPageCurrent(ctx context.Context, url string) ([]api.Incident, string, error) {
 	isStatusIoPage, err := s.isAtlassianPage(url)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to determine if the page is an atlassian page")
+		return nil, s.Name(), errors.Wrap(err, "failed to determine if the page is an atlassian page")
 	}
 	if !isStatusIoPage {
-		return nil, errors.New("page is not a atlassian page")
+		return nil, s.Name(), errors.New("page is not a atlassian page")
 	}
 
 	// Get the current ongoing incidents
 	incidentsOngoing, err := s.getOngoingIncidents(url)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get the ongoing incidents")
+		return nil, s.Name(), errors.Wrap(err, "failed to get the ongoing incidents")
 	}
 
 	// Get the most recent historical incidentsHistoricalRecent
 	incidentsHistoricalRecent, err := s.getHistoricalPageOfIncidents(url, 1, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get the most recent historical incidentsHistoricalRecent")
+		return nil, s.Name(), errors.Wrap(err, "failed to get the most recent historical incidentsHistoricalRecent")
 	}
 
 	// De-dupe the incidents
@@ -76,18 +77,18 @@ func (s *AtlassianProvider) scrapeAtlassianPageCurrent(ctx context.Context, url 
 		incidents = append(incidents, incident)
 	}
 
-	return incidents, nil
+	return incidents, s.Name(), nil
 }
 
 // scrapeAtlassianPageHistorical is a helper function that will attempt to scrape the status page using the atlassian method
 // If the atlassian method fails, it will return an error
-func (s *AtlassianProvider) scrapeAtlassianPageHistorical(ctx context.Context, url string) ([]api.Incident, error) {
+func (s *AtlassianProvider) scrapeAtlassianPageHistorical(ctx context.Context, url string) ([]api.Incident, string, error) {
 	isStatusIoPage, err := s.isAtlassianPage(url)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to determine if the page is a atlassian page")
+		return nil, s.Name(), errors.Wrap(err, "failed to determine if the page is a atlassian page")
 	}
 	if !isStatusIoPage {
-		return nil, errors.New("page is not an atlassian page")
+		return nil, s.Name(), errors.New("page is not an atlassian page")
 	}
 
 	var incidents []api.Incident
@@ -98,11 +99,11 @@ func (s *AtlassianProvider) scrapeAtlassianPageHistorical(ctx context.Context, u
 		// Get the html of the status page
 		incidentPage, err := s.getHistoricalPageOfIncidents(url, page, true)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get the historical incidents")
+			return nil, s.Name(), errors.Wrap(err, "failed to get the historical incidents")
 		}
 		incidents = append(incidents, incidentPage...)
 	}
-	return incidents, nil
+	return incidents, s.Name(), nil
 }
 
 func (s *AtlassianProvider) scrapeStatusIoHistoryPage(url string, page int) (string, error) {
@@ -184,6 +185,7 @@ func (s *AtlassianProvider) parseIncidents(url string, html string, shouldSkipJo
 					StatusPageUrl: url,
 					// For historical jobs we don't want to send notifications
 					NotificationJobsStarted: shouldSkipJobProcessing,
+					Scraper:                 s.Name(),
 				}
 				incidents = append(incidents, incident)
 			}

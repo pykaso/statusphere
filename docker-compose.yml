@@ -9,6 +9,11 @@ services:
       POSTGRES_DB: statusphere_db
     ports:
       - "5432:5432"
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pg_isready -U statusphere_user -d statusphere_db"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
 
   scraper:
     build:
@@ -22,13 +27,14 @@ services:
       STATUSPHERE_POSTGRES_DATABASE: statusphere_db
     depends_on:
       - postgres
+        # condition: service_healthy
 
   apiserver:
     build:
       context: ./
       dockerfile: ./apiserver/Dockerfile
     ports:
-      - "8080:80"
+      - "8888:8888"
     environment:
       STATUSPHERE_POSTGRES_HOST: postgres
       STATUSPHERE_POSTGRES_PORT: 5432
@@ -37,6 +43,7 @@ services:
       STATUSPHERE_POSTGRES_DATABASE: statusphere_db
     depends_on:
       - postgres
+        # condition: service_healthy
 
   jobrunner:
     build:
@@ -50,3 +57,4 @@ services:
       STATUSPHERE_POSTGRES_DATABASE: statusphere_db
     depends_on:
       - postgres
+        # condition: service_healthy

@@ -2,12 +2,13 @@ package poller
 
 import (
 	"context"
+	"time"
+
 	"github.com/metoro-io/statusphere/scraper/internal/scraper"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/consumers"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/urlgetter"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
-	"time"
 )
 
 type Poller struct {
@@ -83,12 +84,12 @@ func (p *Poller) pollInner() error {
 }
 
 func (p *Poller) executeScrape(url string) error {
-	incidents, err := p.scraper.ScrapeStatusPageCurrent(context.Background(), url)
+	incidents, scraper, err := p.scraper.ScrapeStatusPageCurrent(context.Background(), url)
 	if err != nil {
 		return err
 	}
 	for _, consumer := range p.consumers {
-		err := consumer.Consume(incidents)
+		err := consumer.Consume(incidents, scraper, url)
 		if err != nil {
 			return err
 		}
@@ -129,12 +130,12 @@ func (p *Poller) pollInnerHistorical() error {
 
 func (p *Poller) executeScrapeHistorical(url string) error {
 	p.currentlyExecutingHistoricalScrapes.Set(url, struct{}{}, cache.NoExpiration)
-	incidents, err := p.scraper.ScrapeStatusPageHistorical(context.Background(), url)
+	incidents, scraper, err := p.scraper.ScrapeStatusPageHistorical(context.Background(), url)
 	if err != nil {
 		return err
 	}
 	for _, consumer := range p.consumers {
-		err := consumer.Consume(incidents)
+		err := consumer.Consume(incidents, scraper, url)
 		if err != nil {
 			return err
 		}

@@ -13,7 +13,7 @@ func NewStdoutConsumer(logger *zap.Logger) *StdoutConsumer {
 	return &StdoutConsumer{logger: logger}
 }
 
-func (s *StdoutConsumer) Consume(incidents []api.Incident) error {
+func (s *StdoutConsumer) Consume(incidents []api.Incident, scraper string, url string) error {
 	for _, incident := range incidents {
 		s.logger.Info("Incident", zap.Any("incident", incident))
 	}
