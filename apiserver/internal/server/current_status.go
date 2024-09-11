@@ -2,12 +2,13 @@ package server
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/metoro-io/statusphere/common/api"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 type Status string

@@ -191,8 +191,8 @@ func (d *DbClient) GetCurrentIncidents(ctx context.Context, statusPageUrl string
 
 	// incidenty bez konce (end_time = NULL) nebo end_time v budoucnosti
 	result := d.db.Table(fmt.Sprintf("%s.%s", schemaName, incidentsTableName)).
-		Where("status_page_url = ? AND start_time > ? AND (end_time IS NULL OR end_time > ?)",
-			statusPageUrl, time.Now().Add(-14*24*time.Hour), time.Now()).Find(&incidents)
+		Where("status_page_url = ? AND start_time <= ? AND (end_time IS NULL OR end_time > ?)",
+			statusPageUrl, time.Now(), time.Now()).Find(&incidents)
 
 	if result.Error != nil {
 		return nil, result.Error
