@@ -3,14 +3,15 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/metoro-io/statusphere/apiserver/internal/server"
-	"github.com/metoro-io/statusphere/common/db"
-	"github.com/metoro-io/statusphere/common/utils"
-	"go.uber.org/zap"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/metoro-io/statusphere/apiserver/internal/server"
+	"github.com/metoro-io/statusphere/common/db"
+	"github.com/metoro-io/statusphere/common/utils"
+	"go.uber.org/zap"
 )
 
 func main() {

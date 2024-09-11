@@ -3,8 +3,9 @@ package api
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type Impact string
@@ -72,9 +73,10 @@ type Incident struct {
 	Impact                  Impact             `gorm:"column:impact;secondarykey" json:"impact"`
 	StatusPageUrl           string             `gorm:"column:status_page_url;secondarykey" json:"statusPageUrl"`
 	NotificationJobsStarted bool               `gorm:"column:notification_jobs_started;secondarykey" json:"notificationJobsStarted"`
+	Scraper                 string             `gorm:"column:scraper" json:"scraper"`
 }
 
-func NewIncident(title string, components []string, events []IncidentEvent, startTime time.Time, endTime *time.Time, description *string, deepLink string, impact Impact, statusPageUrl string) Incident {
+func NewIncident(title string, components []string, events []IncidentEvent, startTime time.Time, endTime *time.Time, description *string, deepLink string, impact Impact, statusPageUrl string, scraper string) Incident {
 	return Incident{
 		Title:         title,
 		Components:    components,
@@ -85,6 +87,7 @@ func NewIncident(title string, components []string, events []IncidentEvent, star
 		DeepLink:      deepLink,
 		Impact:        impact,
 		StatusPageUrl: statusPageUrl,
+		Scraper:       scraper,
 	}
 }
 

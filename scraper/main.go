@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/metoro-io/statusphere/common/db"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/consumers"
@@ -10,10 +12,11 @@ import (
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/poller"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers/atlassian"
+	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers/instacover"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers/rss"
+	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers/rss_ckp"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/urlgetter/dburlgetter"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 func main() {
@@ -25,6 +28,8 @@ func main() {
 	scraper := scraper.NewScraper(logger, http.DefaultClient, []providers.Provider{
 		atlassian.NewAtlassianProvider(logger, http.DefaultClient),
 		rss.NewRssProvider(logger, http.DefaultClient),
+		rss_ckp.NewCkpRssProvider(logger, http.DefaultClient),
+		instacover.NewAPIProvider(logger, http.DefaultClient),
 	})
 
 	dbClient, err := db.NewDbClientFromEnvironment(logger)

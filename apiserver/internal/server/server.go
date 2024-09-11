@@ -1,6 +1,8 @@
 package server
 
 import (
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -9,7 +11,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"time"
 )
 
 type Server struct {
@@ -52,7 +53,7 @@ func (s *Server) Serve() error {
 		apiV1.GET("/statusPages/count", s.statusPageCount)
 		apiV1.GET("/sitemap.xml", s.siteMap)
 	}
-	return errors.Wrap(r.Run(":80"), "Failed to start server")
+	return errors.Wrap(r.Run(":8888"), "Failed to start server")
 }
 
 func handleCors() gin.HandlerFunc {

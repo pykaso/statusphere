@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"github.com/metoro-io/statusphere/common/api"
-	"github.com/mmcdole/gofeed"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/metoro-io/statusphere/common/api"
+	"github.com/mmcdole/gofeed"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 func (s *RssProvider) Name() string {
@@ -33,31 +34,31 @@ func NewRssProvider(logger *zap.Logger, httpClient *http.Client) *RssProvider {
 }
 
 // There is no historical page differentiation for rss pages so we skip
-func (s *RssProvider) ScrapeStatusPageHistorical(ctx context.Context, url string) ([]api.Incident, error) {
+func (s *RssProvider) ScrapeStatusPageHistorical(ctx context.Context, url string) ([]api.Incident, string, error) {
 	_, isRssPage, err := s.isRssPage(url)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to determine if the page is an rss page")
+		return nil, s.Name(), errors.Wrap(err, "failed to determine if the page is an rss page")
 	}
 	if !isRssPage {
-		return nil, errors.New("page is not a rss page")
+		return nil, s.Name(), errors.New("page is not a rss page")
 	}
-	return []api.Incident{}, nil
+	return []api.Incident{}, s.Name(), nil
 }
 
-func (s *RssProvider) ScrapeStatusPageCurrent(ctx context.Context, url string) ([]api.Incident, error) {
+func (s *RssProvider) ScrapeStatusPageCurrent(ctx context.Context, url string) ([]api.Incident, string, error) {
 	return s.scrapeRssPage(ctx, url)
 }
 
 // scrapeRssPage is a helper function that will attempt to scrape the status
 // page using the rss method
 // If the ress method fails, it will return an error
-func (s *RssProvider) scrapeRssPage(ctx context.Context, url string) ([]api.Incident, error) {
+func (s *RssProvider) scrapeRssPage(ctx context.Context, url string) ([]api.Incident, string, error) {
 	rssPage, isRssPage, err := s.isRssPage(url)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to determine if the page is an rss page")
+		return nil, s.Name(), errors.Wrap(err, "failed to determine if the page is an rss page")
 	}
 	if !isRssPage {
-		return nil, errors.New("page is not a rss page")
+		return nil, s.Name(), errors.New("page is not a rss page")
 	}
 
 	// Get the incidents from the rss page
@@ -87,25 +88,25 @@ func (s *RssProvider) isRssPage(url string) (string, bool, error) {
 	return "", false, nil
 }
 
-func (s *RssProvider) getIncidentsFromRssPage(url string, statusPageUrl string) ([]api.Incident, error) {
+func (s *RssProvider) getIncidentsFromRssPage(url string, statusPageUrl string) ([]api.Incident, string, error) {
 	var incidents []api.Incident
 
 	// Fetch the RSS or Atom feed
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch the feed: %w", err)
+		return nil, s.Name(), fmt.Errorf("failed to fetch the feed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the feed: %w", err)
+		return nil, s.Name(), fmt.Errorf("failed to read the feed: %w", err)
 	}
 
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseString(string(body))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse the feed: %w", err)
+		return nil, s.Name(), fmt.Errorf("failed to parse the feed: %w", err)
 	}
 
 	for _, item := range feed.Items {
@@ -133,14 +134,15 @@ func (s *RssProvider) getIncidentsFromRssPage(url string, statusPageUrl string) 
 			// Not all RSS feeds have an impact field, so we default to none
 			Impact:        api.ImpactNone,
 			StatusPageUrl: statusPageUrl,
+			Scraper:       s.Name(),
 		})
 	}
 
 	if len(incidents) == 0 {
-		return nil, errors.New("no incidents found")
+		return nil, s.Name(), errors.New("no incidents found")
 	}
 
-	return incidents, nil
+	return incidents, s.Name(), nil
 }
 
 func getUrls(url string) []string {
