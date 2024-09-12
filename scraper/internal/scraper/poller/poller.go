@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/metoro-io/statusphere/common/api"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/consumers"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/urlgetter"
@@ -51,45 +52,47 @@ func (p *Poller) Poll() error {
 }
 
 func (p *Poller) pollInner() error {
-	urlsToScrape, err := p.urlGetter.GetUrlsToScrape()
+	//urlsToScrape, err := p.urlGetter.GetUrlsToScrape()
+	pagesToScrape, err := p.urlGetter.GetPagesToScrape()
 	if err != nil {
 		return err
 	}
 
-	var urlsToScrapeWhichAreNotCurrentlyExecuting []string
-	for _, url := range urlsToScrape {
-		if _, found := p.currentlyExecutingScrapes.Get(url); !found {
-			urlsToScrapeWhichAreNotCurrentlyExecuting = append(urlsToScrapeWhichAreNotCurrentlyExecuting, url)
+	var urlsToScrapeWhichAreNotCurrentlyExecuting []api.StatusPage
+	for _, page := range pagesToScrape {
+		if _, found := p.currentlyExecutingScrapes.Get(page.URL); !found {
+			urlsToScrapeWhichAreNotCurrentlyExecuting = append(urlsToScrapeWhichAreNotCurrentlyExecuting, page)
 		}
 	}
 
-	for _, url := range urlsToScrapeWhichAreNotCurrentlyExecuting {
-		go func(url string) {
-			p.logger.Info("scraping", zap.String("url", url))
-			defer p.logger.Info("finished scraping", zap.String("url", url))
-			p.currentlyExecutingScrapes.Set(url, true, cache.NoExpiration)
-			defer p.currentlyExecutingScrapes.Delete(url)
-			err := p.executeScrape(url)
+	for _, page := range urlsToScrapeWhichAreNotCurrentlyExecuting {
+		go func(page api.StatusPage) {
+			p.logger.Info("scraping", zap.String("url", page.URL))
+			defer p.logger.Info("finished scraping", zap.String("url", page.URL))
+			p.currentlyExecutingScrapes.Set(page.URL, true, cache.NoExpiration)
+			defer p.currentlyExecutingScrapes.Delete(page.URL)
+			err := p.executeScrape(page)
 			successfullyScraped := err == nil
-			defer func(urlGetter urlgetter.URLGetter, url string, time time.Time) {
-				_ = urlGetter.UpdateLastScrapedTime(url, time, successfullyScraped)
-			}(p.urlGetter, url, time.Now())
+			defer func(urlGetter urlgetter.URLGetter, page api.StatusPage, time time.Time) {
+				_ = urlGetter.UpdateLastScrapedTime(page, time, successfullyScraped)
+			}(p.urlGetter, page, time.Now())
 			if err != nil {
-				p.logger.Error("failed to scrape", zap.Error(err), zap.String("url", url))
+				p.logger.Error("failed to scrape", zap.Error(err), zap.String("url", page.URL))
 				return
 			}
-		}(url)
+		}(page)
 	}
 	return nil
 }
 
-func (p *Poller) executeScrape(url string) error {
-	incidents, scraper, err := p.scraper.ScrapeStatusPageCurrent(context.Background(), url)
+// func (p *Poller) executeScrape(url string) error {
+func (p *Poller) executeScrape(page api.StatusPage) error {
+	incidents, scraper, err := p.scraper.ScrapeStatusPageCurrent(context.Background(), page)
 	if err != nil {
 		return err
 	}
 	for _, consumer := range p.consumers {
-		err := consumer.Consume(incidents, scraper, url)
+		err := consumer.Consume(incidents, scraper, page)
 		if err != nil {
 			return err
 		}
@@ -135,7 +138,7 @@ func (p *Poller) executeScrapeHistorical(url string) error {
 		return err
 	}
 	for _, consumer := range p.consumers {
-		err := consumer.Consume(incidents, scraper, url)
+		err := consumer.ConsumeUrl(incidents, scraper, url)
 		if err != nil {
 			return err
 		}

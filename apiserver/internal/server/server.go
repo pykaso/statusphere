@@ -59,7 +59,7 @@ func (s *Server) Serve() error {
 func handleCors() gin.HandlerFunc {
 	corsConfig := cors.DefaultConfig()
 	// Development cors
-	corsConfig.AllowOrigins = []string{"http://localhost:3000", "https://metoro.io"}
+	corsConfig.AllowOrigins = []string{"http://localhost:3000", "https://direct.pykaso.net", "http://127.0.0.1:8888"}
 	handlerFunc := cors.New(corsConfig)
 	return handlerFunc
 }

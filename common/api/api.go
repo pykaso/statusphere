@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,6 +17,14 @@ const (
 	ImpactCritical    Impact = "critical"
 	ImpactMaintenance Impact = "maintenance"
 	ImpactNone        Impact = "none"
+)
+
+type HttpMethod string
+
+const (
+	MethodPost HttpMethod = "POST"
+	MethodGet  HttpMethod = "GET"
+	MethodHead HttpMethod = "HEAD"
 )
 
 var ErrInvalidImpact = errors.New("invalid impact")
@@ -91,6 +100,38 @@ func NewIncident(title string, components []string, events []IncidentEvent, star
 	}
 }
 
+type JSONMap map[string]string
+type JSONStruct map[string]interface{}
+
+// Scan implementuje deserializaci z JSONB do mapy
+func (m *JSONMap) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return fmt.Errorf("unsupported Scan, storing driver.Value type %T into type *map[string]string", value)
+	}
+
+	return json.Unmarshal(bytes, m)
+}
+
+// Value implementuje serializaci mapy do JSONB
+func (m JSONMap) Value() (driver.Value, error) {
+	return json.Marshal(m)
+}
+
+func (m *JSONStruct) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return fmt.Errorf("unsupported Scan, storing driver.Value type %T into type *map[string]string", value)
+	}
+
+	return json.Unmarshal(bytes, m)
+}
+
+// Value implementuje serializaci mapy do JSONB
+func (m JSONStruct) Value() (driver.Value, error) {
+	return json.Marshal(m)
+}
+
 type StatusPage struct {
 	Name string `gorm:"secondarykey" json:"name"`
 	URL  string `gorm:"primarykey" json:"url"`
@@ -98,7 +139,12 @@ type StatusPage struct {
 	LastHistoricallyScraped time.Time `json:"lastHistoricallyScraped"`
 	LastCurrentlyScraped    time.Time `json:"lastCurrentlyScraped"`
 	// IsIndexed is used to determine if the status page has ever been indexed in the search engine successfully
-	IsIndexed bool `json:"isIndexed"`
+	IsIndexed        bool       `json:"isIndexed"`
+	PreferredScraper string     `json:"preferredScraper"`
+	Headers          JSONMap    `gorm:"type:jsonb" json:"headers"`
+	RequestPayload   JSONStruct `gorm:"type:jsonb" json:"payload"`
+	Method           HttpMethod `json:"httpMethod"`
+	ValidationRules  JSONStruct `gorm:"type:jsonb" json:"rules"`
 }
 
 func NewStatusPage(name string, url string) StatusPage {

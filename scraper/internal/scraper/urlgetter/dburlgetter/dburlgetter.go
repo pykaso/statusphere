@@ -2,12 +2,13 @@ package dburlgetter
 
 import (
 	"context"
+	"time"
+
 	"github.com/metoro-io/statusphere/common/api"
 	"github.com/metoro-io/statusphere/common/db"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"time"
 )
 
 type DBURLGetter struct {
@@ -38,8 +39,8 @@ func (s *DBURLGetter) UpdateLastScrapedTimeHistorical(url string, time time.Time
 	return nil
 }
 
-func (s *DBURLGetter) UpdateLastScrapedTime(url string, time time.Time, scraped bool) error {
-	statusPage, err := s.dbClient.GetStatusPage(context.Background(), url)
+func (s *DBURLGetter) UpdateLastScrapedTime(page api.StatusPage, time time.Time, scraped bool) error {
+	statusPage, err := s.dbClient.GetStatusPage(context.Background(), page.URL)
 	if err != nil {
 		return errors.Wrap(err, "failed to get status page")
 	}
@@ -51,13 +52,13 @@ func (s *DBURLGetter) UpdateLastScrapedTime(url string, time time.Time, scraped 
 	if err != nil {
 		return errors.Wrap(err, "failed to update status page")
 	}
-	s.StatusPageCache.Set(url, *statusPage, cache.DefaultExpiration)
+	s.StatusPageCache.Set(page.URL, *statusPage, cache.DefaultExpiration)
 	return nil
 }
 
 const timeToRescrape = 5 * time.Minute
 
-func (s *DBURLGetter) GetUrlsToScrape() ([]string, error) {
+func (s *DBURLGetter) GetUrlsToScrapeOrig() ([]string, error) {
 	urlsToUse := []string{}
 	items := s.StatusPageCache.Items()
 	for k, v := range items {
@@ -71,6 +72,25 @@ func (s *DBURLGetter) GetUrlsToScrape() ([]string, error) {
 		}
 	}
 	return urlsToUse, nil
+}
+
+func (s *DBURLGetter) GetPagesToScrape() ([]api.StatusPage, error) {
+	// urlsToUse := []string{}
+	pagesToUse := []api.StatusPage{}
+
+	items := s.StatusPageCache.Items()
+	for _, v := range items {
+		statusPage, ok := v.Object.(api.StatusPage)
+		if !ok {
+			s.logger.Error("failed to cast status page")
+			continue
+		}
+		if time.Since(statusPage.LastCurrentlyScraped) > timeToRescrape {
+			// urlsToUse = append(urlsToUse, k)
+			pagesToUse = append(pagesToUse, statusPage)
+		}
+	}
+	return pagesToUse, nil
 }
 
 const timeToRescrapeHistorical = 24 * time.Hour * 7

@@ -13,12 +13,13 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/metoro-io/statusphere/common/api"
+	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 func (s *AtlassianProvider) Name() string {
-	return "Atlassian"
+	return string(providers.ProviderAtlassian)
 }
 
 type AtlassianProvider struct {
@@ -37,15 +38,15 @@ func (s *AtlassianProvider) ScrapeStatusPageHistorical(ctx context.Context, url 
 	return s.scrapeAtlassianPageHistorical(ctx, url)
 }
 
-func (s *AtlassianProvider) ScrapeStatusPageCurrent(ctx context.Context, url string) ([]api.Incident, string, error) {
-	return s.scrapeAtlassianPageCurrent(ctx, url)
+func (s *AtlassianProvider) ScrapeStatusPageCurrent(ctx context.Context, page api.StatusPage) ([]api.Incident, string, error) {
+	return s.scrapeAtlassianPageCurrent(ctx, page)
 }
 
 // scrapeAtlassianPageCurrent is a helper function that will attempt to scrape the status
 // page using the atlassian method
 // If the atlassian method fails, it will return an error
-func (s *AtlassianProvider) scrapeAtlassianPageCurrent(ctx context.Context, url string) ([]api.Incident, string, error) {
-	isStatusIoPage, err := s.isAtlassianPage(url)
+func (s *AtlassianProvider) scrapeAtlassianPageCurrent(ctx context.Context, page api.StatusPage) ([]api.Incident, string, error) {
+	isStatusIoPage, err := s.isAtlassianPage(page.URL)
 	if err != nil {
 		return nil, s.Name(), errors.Wrap(err, "failed to determine if the page is an atlassian page")
 	}
@@ -54,13 +55,13 @@ func (s *AtlassianProvider) scrapeAtlassianPageCurrent(ctx context.Context, url 
 	}
 
 	// Get the current ongoing incidents
-	incidentsOngoing, err := s.getOngoingIncidents(url)
+	incidentsOngoing, err := s.getOngoingIncidents(page.URL)
 	if err != nil {
 		return nil, s.Name(), errors.Wrap(err, "failed to get the ongoing incidents")
 	}
 
 	// Get the most recent historical incidentsHistoricalRecent
-	incidentsHistoricalRecent, err := s.getHistoricalPageOfIncidents(url, 1, false)
+	incidentsHistoricalRecent, err := s.getHistoricalPageOfIncidents(page.URL, 1, false)
 	if err != nil {
 		return nil, s.Name(), errors.Wrap(err, "failed to get the most recent historical incidentsHistoricalRecent")
 	}

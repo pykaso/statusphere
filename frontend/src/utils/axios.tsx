@@ -17,15 +17,6 @@ axiosServices.interceptors.request.use(
   }
 );
 
-axiosServices.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    console.error(error);
-  }
-);
-
 var mock = new MockAdapter(axiosServices);
 
 mock.onAny().passThrough();
