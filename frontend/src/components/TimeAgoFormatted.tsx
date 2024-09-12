@@ -1,25 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/router";
-import { timeAgo } from "@/utils/datetime";
+import { useEffect, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { cs } from "date-fns/locale";
+
 interface TimeAgoFormattedProps {
   time: string;
 }
 
-export function TimeAgoFormatted(props: TimeAgoFormattedProps) {
-  const [isClient, setIsClient] = useState(false);
+export function TimeAgoFormatted({ time }: TimeAgoFormattedProps) {
+  const [formattedTime, setFormattedTime] = useState<string>(() =>
+    formatDistanceToNow(new Date(time), { addSuffix: true, locale: cs })
+  );
 
-  // Nastavíme isClient na true po hydrataci (když běží na klientu)
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    const timer = setInterval(() => {
+      setFormattedTime(
+        formatDistanceToNow(new Date(time), { addSuffix: true, locale: cs })
+      );
+    }, 1000);
 
-  // Pokud není na klientu, nezobrazuj časově závislé informace
-  if (!isClient) {
-    return null; // Nebude vykresleno na serveru
-  }
+    return () => clearInterval(timer);
+  }, [time]);
 
-  return <span>{timeAgo(props.time)}</span>;
+  return <span suppressHydrationWarning>{formattedTime}</span>;
 }
