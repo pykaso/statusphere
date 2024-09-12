@@ -5,6 +5,8 @@ import { Status } from "@/model/Status";
 import StatusTable from "@/components/StatusTable";
 import Head from "next/head";
 
+export const revalidate = 0;
+
 export function generateMetadata() {
   return {
     title: `Stav externích služeb`,
@@ -36,11 +38,6 @@ export default async function Home() {
   const companyList = await getStatuses();
   return (
     <>
-      <Head>
-        <title>Stav externích API</title>
-        <meta name="description" content="Stav externích API" />
-        <meta httpEquiv="refresh" content="10" />
-      </Head>
       <Header />
       <StatusTable companyList={companyList} />
     </>

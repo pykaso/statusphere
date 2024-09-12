@@ -12,13 +12,14 @@ import (
 	"time"
 
 	"github.com/metoro-io/statusphere/common/api"
+	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers"
 	"github.com/mmcdole/gofeed"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 func (s *RssProvider) Name() string {
-	return "RSS"
+	return string(providers.ProviderRSS)
 }
 
 type RssProvider struct {
@@ -45,8 +46,8 @@ func (s *RssProvider) ScrapeStatusPageHistorical(ctx context.Context, url string
 	return []api.Incident{}, s.Name(), nil
 }
 
-func (s *RssProvider) ScrapeStatusPageCurrent(ctx context.Context, url string) ([]api.Incident, string, error) {
-	return s.scrapeRssPage(ctx, url)
+func (s *RssProvider) ScrapeStatusPageCurrent(ctx context.Context, page api.StatusPage) ([]api.Incident, string, error) {
+	return s.scrapeRssPage(ctx, page.URL)
 }
 
 // scrapeRssPage is a helper function that will attempt to scrape the status

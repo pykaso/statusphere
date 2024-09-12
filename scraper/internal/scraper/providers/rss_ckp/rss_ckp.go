@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/metoro-io/statusphere/common/api"
+	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 func (s *CkpRssProvider) Name() string {
-	return "CKP_RSS"
+	return string(providers.ProviderCKP)
 }
 
 type CkpRssProvider struct {
@@ -31,8 +32,8 @@ func NewCkpRssProvider(logger *zap.Logger, httpClient *http.Client) *CkpRssProvi
 	}
 }
 
-func (s *CkpRssProvider) ScrapeStatusPageCurrent(ctx context.Context, url string) ([]api.Incident, string, error) {
-	return s.scrapeRssPage(ctx, url)
+func (s *CkpRssProvider) ScrapeStatusPageCurrent(ctx context.Context, page api.StatusPage) ([]api.Incident, string, error) {
+	return s.scrapeRssPage(ctx, page)
 }
 
 func (s *CkpRssProvider) ScrapeStatusPageHistorical(ctx context.Context, url string) ([]api.Incident, string, error) {
@@ -43,8 +44,8 @@ func (s *CkpRssProvider) ScrapeStatusPageHistorical(ctx context.Context, url str
 // scrapeRssPage is a helper function that will attempt to scrape the status
 // page using the rss method
 // If the ress method fails, it will return an error
-func (s *CkpRssProvider) scrapeRssPage(ctx context.Context, url string) ([]api.Incident, string, error) {
-	rssPage, isRssPage, err := s.isRssPage(url)
+func (s *CkpRssProvider) scrapeRssPage(ctx context.Context, page api.StatusPage) ([]api.Incident, string, error) {
+	rssPage, isRssPage, err := s.isRssPage(page.URL)
 	if err != nil {
 		return nil, s.Name(), errors.Wrap(err, "failed to determine if the page is an rss page")
 	}
@@ -54,7 +55,7 @@ func (s *CkpRssProvider) scrapeRssPage(ctx context.Context, url string) ([]api.I
 
 	print(rssPage)
 
-	return s.getIncidentsFromRssPage(rssPage, url)
+	return s.getIncidentsFromRssPage(rssPage, page.URL)
 }
 
 // We determine if a page is an rss page by checking if there is a /history page and

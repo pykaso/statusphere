@@ -2,8 +2,6 @@ package db
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -228,17 +226,17 @@ func (d *DbClient) SetIncidentNotificationStartedToTrue(ctx context.Context, inc
 
 // specificky scraper ktery neparsuje status page s incidenty ale overuje dostupnost adresy / API
 func IsApiAvailabilityScraper(name string) bool {
-	return name == "InstacoverAPI"
+	return name == "REST"
 }
 
-func generateRandomString(length int) (string, error) {
-	bytes := make([]byte, length/2) // Protože každý bajt se bude reprezentovat dvěma hexadecimálními znaky
-	_, err := rand.Read(bytes)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
+// func generateRandomString(length int) (string, error) {
+// 	bytes := make([]byte, length/2) // Protože každý bajt se bude reprezentovat dvěma hexadecimálními znaky
+// 	_, err := rand.Read(bytes)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return hex.EncodeToString(bytes), nil
+// }
 
 func (s *DbClient) ProcessAndCloseOngoingIncident(ctx context.Context, incidents []api.Incident, scraper string, url string) error {
 	if len(incidents) > 0 {

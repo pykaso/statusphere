@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/metoro-io/statusphere/common/api"
+	"github.com/metoro-io/statusphere/common/status_pages"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers/atlassian"
-	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers/instacover"
+	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers/rest"
 	"github.com/metoro-io/statusphere/scraper/internal/scraper/providers/rss_ckp"
 	"go.uber.org/zap"
 )
@@ -32,7 +34,10 @@ func TestE2eDropboxHistorical(t *testing.T) {
 		t.Errorf("Failed to create logger")
 	}
 	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{atlassian.NewAtlassianProvider(dev, http.DefaultClient)})
-	incidents, _, err := scraper.ScrapeStatusPageHistorical(context.Background(), "https://status.dropbox.com")
+	status_page := api.StatusPage{
+		URL: "https://status.dropbox.com",
+	}
+	incidents, _, err := scraper.ScrapeStatusPageHistorical(context.Background(), status_page.URL)
 	if err != nil {
 		t.Errorf("Failed to scrape status page: %s", "https://status.dropbox.com")
 	}
@@ -45,7 +50,10 @@ func TestE2eCloudflareCurrent(t *testing.T) {
 		t.Errorf("Failed to create logger")
 	}
 	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{atlassian.NewAtlassianProvider(dev, http.DefaultClient)})
-	incident, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), "https://www.cloudflarestatus.com")
+	status_page := api.StatusPage{
+		URL: "https://www.cloudflarestatus.com",
+	}
+	incident, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), status_page)
 	if err != nil {
 		t.Errorf("Failed to scrape status page: %s", "https://www.cloudflarestatus.com")
 	}
@@ -58,12 +66,16 @@ func TestE2eManyCurrent(t *testing.T) {
 		t.Errorf("Failed to create logger")
 	}
 	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{atlassian.NewAtlassianProvider(dev, http.DefaultClient)})
-	for _, statusPage := range statusPages {
-		incidents, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), statusPage)
-		if err != nil {
-			t.Errorf("Failed to scrape status page: %s", statusPage)
+	for _, url := range statusPages {
+
+		status_page := api.StatusPage{
+			URL: url,
 		}
-		dev.Info("Incidents from status page", zap.Any("statusPage", statusPage), zap.Any("numIncidents", len(incidents)))
+		incidents, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), status_page)
+		if err != nil {
+			t.Errorf("Failed to scrape status page: %s", status_page.URL)
+		}
+		dev.Info("Incidents from status page", zap.Any("statusPage", status_page), zap.Any("numIncidents", len(incidents)))
 	}
 }
 
@@ -73,26 +85,75 @@ func TestE2eCkpRSS(t *testing.T) {
 		t.Errorf("Failed to create logger")
 	}
 	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{rss_ckp.NewCkpRssProvider(dev, http.DefaultClient)})
-	var statusPage = "http://10.1.10.102:5050/rss"
+	var statusPage = status_pages.PageCKP
 	incidents, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), statusPage)
 	if err != nil {
-		t.Errorf("Failed to scrape status page: %s", statusPage)
+		t.Errorf("Failed to scrape status page: %s", statusPage.URL)
 	}
 	dev.Info("Incidents from status page", zap.Any("statusPage", statusPage), zap.Any("numIncidents", len(incidents)))
 
 }
 
-func TestE2eInstacoverApi(t *testing.T) {
+func TestE2eRestApiInstacover(t *testing.T) {
 	dev, err := zap.NewDevelopment()
 	if err != nil {
 		t.Errorf("Failed to create logger")
 	}
-	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{instacover.NewAPIProvider(dev, http.DefaultClient)})
-	var statusPage = "http://10.1.10.102:5050/status"
+	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{rest.NewRestProvider(dev, http.DefaultClient)})
+
+	var statusPage = status_pages.PageInstacover
 	incidents, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), statusPage)
 	if err != nil {
-		t.Errorf("Failed to scrape status page: %s", statusPage)
+		t.Error(err)
+		t.Errorf("Failed to scrape status page: %s.", statusPage.URL)
 	}
 	dev.Info("Incidents from status page", zap.Any("statusPage", statusPage), zap.Any("numIncidents", len(incidents)))
+}
 
+func TestE2eRestApiSmartform(t *testing.T) {
+	dev, err := zap.NewDevelopment()
+	if err != nil {
+		t.Errorf("Failed to create logger")
+	}
+	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{rest.NewRestProvider(dev, http.DefaultClient)})
+
+	var statusPage = status_pages.PageSmartform
+	incidents, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), statusPage)
+	if err != nil {
+		t.Error(err)
+		t.Errorf("Failed to scrape status page: %s.", statusPage.URL)
+	}
+	dev.Info("Incidents from status page", zap.Any("statusPage", statusPage), zap.Any("numIncidents", len(incidents)))
+}
+
+func TestE2eRestApiAres(t *testing.T) {
+	dev, err := zap.NewDevelopment()
+	if err != nil {
+		t.Errorf("Failed to create logger")
+	}
+	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{rest.NewRestProvider(dev, http.DefaultClient)})
+
+	var statusPage = status_pages.PageAres
+	incidents, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), statusPage)
+	if err != nil {
+		t.Error(err)
+		t.Errorf("Failed to scrape status page: %s.", statusPage.URL)
+	}
+	dev.Info("Incidents from status page", zap.Any("statusPage", statusPage), zap.Any("numIncidents", len(incidents)))
+}
+
+func TestE2eRestIPEX(t *testing.T) {
+	dev, err := zap.NewDevelopment()
+	if err != nil {
+		t.Errorf("Failed to create logger")
+	}
+	scraper := scraper.NewScraper(dev, http.DefaultClient, []providers.Provider{rest.NewRestProvider(dev, http.DefaultClient)})
+
+	var statusPage = status_pages.PageIPEX
+	incidents, _, err := scraper.ScrapeStatusPageCurrent(context.Background(), statusPage)
+	if err != nil {
+		t.Error(err)
+		t.Errorf("Failed to scrape status page: %s.", statusPage.URL)
+	}
+	dev.Info("Incidents from status page", zap.Any("statusPage", statusPage), zap.Any("numIncidents", len(incidents)))
 }

@@ -20,7 +20,16 @@ func NewDbConsumer(logger *zap.Logger, client *db.DbClient) *DbConsumer {
 	}
 }
 
-func (s *DbConsumer) Consume(incidents []api.Incident, scraper string, url string) error {
+func (s *DbConsumer) Consume(incidents []api.Incident, scraper string, page api.StatusPage) error {
+	err := s.dbClient.CreateOrUpdateIncidents(context.Background(), incidents, scraper, page.URL)
+	if err != nil {
+		s.logger.Error("failed to create or update incidents", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func (s *DbConsumer) ConsumeUrl(incidents []api.Incident, scraper string, url string) error {
 	err := s.dbClient.CreateOrUpdateIncidents(context.Background(), incidents, scraper, url)
 	if err != nil {
 		s.logger.Error("failed to create or update incidents", zap.Error(err))
